@@ -1,0 +1,41 @@
+{% extends 'music_app/base.html' %}
+
+{% block title %}Delete Music - Music Converter{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="card-title mb-0"><i class="bi-trash"></i> Delete Music File</h4>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-warning">
+                    <i class="bi-exclamation-triangle"></i> 
+                    Are you sure you want to delete "{{ music.title }}"?
+                </div>
+                
+                <div class="mb-3">
+                    <audio controls class="w-100">
+                        <source src="{{ music.original_file.url }}" type="audio/{{ music.original_extension }}">
+                        Your browser does not support the audio element.
+                    </audio>
+                </div>
+                
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-danger">
+                            <i class="bi-trash"></i> Yes, Delete
+                        </button>
+                        <a href="{% url 'music_list' %}" class="btn btn-secondary">
+                            <i class="bi-arrow-left"></i> Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

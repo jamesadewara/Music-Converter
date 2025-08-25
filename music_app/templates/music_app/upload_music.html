@@ -1,0 +1,51 @@
+{% extends 'music_app/base.html' %}
+
+{% block title %}Upload Music - Music Converter{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="card-title mb-0"><i class="bi-cloud-upload"></i> Upload Music File</h4>
+            </div>
+            <div class="card-body">
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    
+                    <div class="mb-3">
+                        <label for="id_title" class="form-label">Song Title</label>
+                        {{ form.title }}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="id_artist" class="form-label">Artist</label>
+                        {{ form.artist }}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="id_original_file" class="form-label">Music File</label>
+                        {{ form.original_file }}
+                        <div class="form-text">Supported formats: MP3, WAV, OGG, FLAC, M4A</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="id_target_extension" class="form-label">Convert To</label>
+                        {{ form.target_extension }}
+                        <div class="form-text">Select the format you want to convert your music to</div>
+                    </div>
+                    
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi-cloud-upload"></i> Upload
+                        </button>
+                        <a href="{% url 'music_list' %}" class="btn btn-secondary">
+                            <i class="bi-arrow-left"></i> Back to List
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

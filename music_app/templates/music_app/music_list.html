@@ -1,0 +1,40 @@
+{% extends 'music_app/base.html' %}
+
+{% block title %}Music List - Music Manager{% endblock %}
+
+{% block content %}
+<h2>Music Files</h2>
+<a href="{% url 'upload_music' %}" class="btn btn-primary mb-3">Upload New Music</a>
+
+<div class="row">
+    {% for music in music_files %}
+    <div class="col-md-6 col-lg-4 mb-4">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">{{ music.title }}</h5>
+                <h6 class="card-subtitle mb-2 text-muted">{{ music.artist }}</h6>
+                <p class="card-text">
+                    Format: {{ music.extension|upper }}<br>
+                    Uploaded: {{ music.uploaded_at|date:"M d, Y" }}
+                </p>
+                <div class="mb-3">
+                    <audio controls class="w-100">
+                        <source src="{{ music.audio_file.url }}" type="audio/{{ music.extension }}">
+                        Your browser does not support the audio element.
+                    </audio>
+                </div>
+                <div class="d-flex gap-2">
+                    <a href="{{ music.audio_file.url }}" download class="btn btn-success btn-sm">Download</a>
+                    <a href="{% url 'edit_music' music.pk %}" class="btn btn-warning btn-sm">Edit</a>
+                    <a href="{% url 'delete_music' music.pk %}" class="btn btn-danger btn-sm">Delete</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12">
+        <div class="alert alert-info">No music files uploaded yet.</div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}
