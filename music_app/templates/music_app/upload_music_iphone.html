@@ -1,0 +1,156 @@
+{% extends 'music_app/base.html' %}
+
+{% block title %}Upload Music - Music Converter{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h4 class="card-title mb-0"><i class="bi-phone"></i> iPhone Upload</h4>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <h5><i class="bi-info-circle"></i> iPhone Upload Instructions</h5>
+                    <p>On iPhone, please follow these steps to upload music:</p>
+                    <ol>
+                        <li>Tap the "Choose File" button below</li>
+                        <li>Select "Browse" from the menu</li>
+                        <li>Navigate to your music files (usually in "Files" app or "iCloud Drive")</li>
+                        <li>Select the audio file you want to upload</li>
+                    </ol>
+                </div>
+                
+                <form method="post" enctype="multipart/form-data" id="iphoneUploadForm">
+                    {% csrf_token %}
+                    
+                    <div class="mb-3">
+                        <label for="id_title" class="form-label">Song Title *</label>
+                        <input type="text" name="title" class="form-control" placeholder="Enter song title" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="id_artist" class="form-label">Artist</label>
+                        <input type="text" name="artist" class="form-control" placeholder="Enter artist name">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="id_original_file" class="form-label">Music File *</label>
+                        <input type="file" name="original_file" class="form-control" accept="audio/*" required>
+                        <div class="form-text">Supported formats: MP3, WAV, OGG, FLAC, M4A, AAC</div>
+                        <div id="fileError" class="text-danger d-none"></div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="id_target_extension" class="form-label">Convert To *</label>
+                        <select name="target_extension" class="form-control" required>
+                            <option value="mp3">MP3</option>
+                            <option value="wav">WAV</option>
+                            <option value="ogg">OGG</option>
+                            <option value="flac">FLAC</option>
+                            <option value="m4a">M4A</option>
+                            <option value="aac">AAC</option>
+                        </select>
+                        <div class="form-text">Select the format you want to convert your music to</div>
+                    </div>
+                    
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary" id="submitBtn">
+                            <i class="bi-cloud-upload"></i> Upload from iPhone
+                        </button>
+                        <a href="{% url 'music_list' %}" class="btn btn-secondary">
+                            <i class="bi-arrow-left"></i> Back to List
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('iphoneUploadForm');
+    const fileInput = document.querySelector('input[type="file"]');
+    const fileError = document.getElementById('fileError');
+    const submitBtn = document.getElementById('submitBtn');
+    
+    // iOS-specific enhancements
+    if (/iP(hone|od|ad)/.test(navigator.userAgent)) {
+        // Add a helpful message when the file input is focused
+        fileInput.addEventListener('focus', function() {
+            if (this.value === '') {
+                alert('On iOS, please tap "Browse" to select a file from your Files app or iCloud Drive.');
+            }
+        });
+        
+        // Force the "Browse" option to appear by using a different approach
+        setTimeout(function() {
+            const newFileInput = document.createElement('input');
+            newFileInput.type = 'file';
+            newFileInput.name = 'original_file';
+            newFileInput.className = 'form-control';
+            newFileInput.accept = 'audio/*';
+            newFileInput.required = true;
+            newFileInput.style.display = 'none';
+            
+            newFileInput.addEventListener('change', function() {
+                fileInput.files = this.files;
+                // Trigger change event on original input
+                const event = new Event('change', { bubbles: true });
+                fileInput.dispatchEvent(event);
+            });
+            
+            fileInput.parentNode.appendChild(newFileInput);
+            
+            // Replace the original input with a button that triggers the hidden input
+            const browseButton = document.createElement('button');
+            browseButton.type = 'button';
+            browseButton.className = 'btn btn-outline-primary btn-sm mt-2';
+            browseButton.innerHTML = '<i class="bi-folder2-open"></i> Browse Files';
+            browseButton.addEventListener('click', function() {
+                newFileInput.click();
+            });
+            
+            fileInput.parentNode.appendChild(browseButton);
+        }, 1000);
+    }
+    
+    // Validate file before submission
+    form.addEventListener('submit', function(e) {
+        const file = fileInput.files[0];
+        if (!file) {
+            e.preventDefault();
+            fileError.textContent = 'Please select a file to upload.';
+            fileError.classList.remove('d-none');
+            return;
+        }
+        
+        // Check file size (max 25MB)
+        const maxSize = 25 * 1024 * 1024; // 25MB in bytes
+        if (file.size > maxSize) {
+            e.preventDefault();
+            fileError.textContent = 'File size must be less than 25MB.';
+            fileError.classList.remove('d-none');
+            return;
+        }
+        
+        // Check file type
+        const allowedTypes = ['audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/flac', 'audio/x-m4a', 'audio/aac', 'audio/mp4'];
+        const allowedExtensions = ['.mp3', '.wav', '.ogg', '.flac', '.m4a', '.aac'];
+        const fileExtension = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+        
+        if (!allowedTypes.includes(file.type) && !allowedExtensions.includes(fileExtension)) {
+            e.preventDefault();
+            fileError.textContent = 'Please select a valid audio file (MP3, WAV, OGG, FLAC, M4A, AAC).';
+            fileError.classList.remove('d-none');
+            return;
+        }
+        
+        // Disable submit button to prevent double submission
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Uploading...';
+    });
+});
+</script>
+{% endblock %}

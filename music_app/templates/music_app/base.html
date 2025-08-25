@@ -86,5 +86,61 @@
       document.addEventListener("DOMContentLoaded", fixIOSFileUpload);
     </script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Add this script to detect iOS and handle its quirks -->
+    <script>
+      // Detect iOS devices
+      function isIOS() {
+        return (
+          [
+            "iPad Simulator",
+            "iPhone Simulator",
+            "iPod Simulator",
+            "iPad",
+            "iPhone",
+            "iPod",
+          ].includes(navigator.platform) ||
+          (/iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream)
+        );
+      }
+
+      // iOS-specific fixes
+      document.addEventListener("DOMContentLoaded", function () {
+        if (isIOS()) {
+          // Add iOS class to body for CSS targeting
+          document.body.classList.add("ios-device");
+
+          // Fix for file input issues on iOS
+          const fileInputs = document.querySelectorAll('input[type="file"]');
+          fileInputs.forEach((input) => {
+            // iOS often requires a different approach for file selection
+            const parent = input.parentNode;
+            const helpText = document.createElement("div");
+            helpText.className = "alert alert-info mt-2";
+            helpText.innerHTML =
+              '<strong>iOS Users:</strong> Tap "Browse" then navigate to your Files app to select music.';
+            parent.appendChild(helpText);
+          });
+        }
+      });
+    </script>
+
+    <!-- Add iOS-specific styles -->
+    <style>
+      .ios-device .form-control {
+        font-size: 16px; /* Prevents zoom on focus in iOS */
+      }
+
+      /* Special styles for iOS file inputs */
+      .ios-device input[type="file"] {
+        min-height: 44px; /* Minimum touch target size for iOS */
+      }
+
+      .ios-device .btn {
+        min-height: 44px; /* Minimum touch target size for iOS */
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+    </style>
   </body>
 </html>

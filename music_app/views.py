@@ -1,3 +1,4 @@
+import time
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponse, FileResponse
 from django.contrib import messages
@@ -5,11 +6,81 @@ from django.urls import reverse
 from .models import Music
 from .forms import MusicUploadForm, MusicConvertForm
 import os
+import re
+from django.http import JsonResponse
+
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
 
 def music_list(request):
     music_files = Music.objects.all().order_by('-uploaded_at')
     return render(request, 'music_app/music_list.html', {'music_files': music_files})
+
+@csrf_exempt
+def iphone_upload_api(request):
+    """API endpoint specifically for iPhone uploads"""
+    if request.method == 'POST':
+        try:
+            # Handle different content types
+            if 'application/x-www-form-urlencoded' in request.content_type:
+                # Standard form data
+                title = request.POST.get('title', 'Unknown Title')
+                artist = request.POST.get('artist', 'Unknown Artist')
+                target_extension = request.POST.get('target_extension', 'mp3')
+                file = request.FILES.get('original_file')
+            else:
+                # Handle raw file upload (iOS sometimes does this)
+                title = request.META.get('HTTP_X_TITLE', 'Unknown Title')
+                artist = request.META.get('HTTP_X_ARTIST', 'Unknown Artist')
+                target_extension = request.META.get('HTTP_X_FORMAT', 'mp3')
+                
+                # Create file from request body
+                from django.core.files.base import ContentFile
+                filename = request.META.get('HTTP_X_FILENAME', f'audio_{int(time.time())}.mp3')
+                file = ContentFile(request.body, name=filename)
+            
+            if not file:
+                return JsonResponse({'error': 'No file provided'}, status=400)
+            
+            # Create and save music object
+            music = Music(
+                title=title,
+                artist=artist,
+                target_extension=target_extension
+            )
+            music.original_file.save(file.name, file, save=False)
+            music.save()
+            
+            # Return success response
+            return JsonResponse({
+                'success': True,
+                'message': 'File uploaded successfully',
+                'id': music.id,
+                'title': music.title
+            })
+            
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+    
+    return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+def is_iphone(request):
+    """Check if the request is from an iPhone"""
+    user_agent = request.META.get('HTTP_USER_AGENT', '').lower()
+    return 'iphone' in user_agent or 'ipad' in user_agent or 'ipod' in user_agent
+
 def upload_music(request):
+    # Check if this is an iPhone and use a different approach
+    if is_iphone(request):
+        if request.method == 'POST':
+            return handle_iphone_upload(request)
+        else:
+            # Show iPhone-specific upload form
+            return render(request, 'music_app/upload_music_iphone.html', {
+                'is_iphone': True
+            })
+    
+    # Original upload logic for other devices
     if request.method == 'POST':
         form = MusicUploadForm(request.POST, request.FILES)
         if form.is_valid():
@@ -41,10 +112,62 @@ def upload_music(request):
     # Add mobile context
     context = {
         'form': form,
-        'is_mobile': getattr(request, 'is_mobile_device', False)
+        'is_iphone': is_iphone(request)
     }
     return render(request, 'music_app/upload_music.html', context)
 
+def handle_iphone_upload(request):
+    """Special handling for iPhone uploads"""
+    try:
+        # Get the file from request.FILES or request.body for iOS
+        if 'original_file' in request.FILES:
+            file = request.FILES['original_file']
+        else:
+            # iOS sometimes sends files differently
+            # Try to handle raw file data
+            if request.body and len(request.body) > 0:
+                # Create a file from the request body
+                from io import BytesIO
+                from django.core.files.base import ContentFile
+                
+                # Get filename from headers or generate one
+                filename = request.META.get('HTTP_X_FILE_NAME', f'audio_{int(time.time())}.mp3')
+                file = ContentFile(request.body, name=filename)
+            else:
+                messages.error(request, 'No file was received from your device.')
+                return redirect('upload_music')
+        
+        # Get other form data
+        title = request.POST.get('title', 'Unknown Title')
+        artist = request.POST.get('artist', 'Unknown Artist')
+        target_extension = request.POST.get('target_extension', 'mp3')
+        
+        # Create music object
+        music = Music(
+            title=title,
+            artist=artist,
+            target_extension=target_extension
+        )
+        
+        # Save the file
+        music.original_file.save(file.name, file, save=False)
+        music.save()
+        
+        messages.success(request, 'Music file uploaded successfully from your iPhone!')
+        
+        # Try conversion
+        try:
+            if music.convert_audio_file():
+                messages.success(request, f'Music file converted to {music.target_extension.upper()} successfully!')
+        except Exception as e:
+            messages.warning(request, f'File uploaded but conversion failed: {str(e)}')
+            
+        return redirect('music_list')
+        
+    except Exception as e:
+        messages.error(request, f'Error uploading from iPhone: {str(e)}')
+        return redirect('upload_music')
+    
 def convert_music(request, pk):
     music = get_object_or_404(Music, pk=pk)
     
