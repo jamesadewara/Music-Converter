@@ -1,10 +1,14 @@
 {% extends 'music_app/base.html' %}
 
-{% block title %}Music List - Music Manager{% endblock %}
+{% block title %}Music List - Music Converter{% endblock %}
 
 {% block content %}
-<h2>Music Files</h2>
-<a href="{% url 'upload_music' %}" class="btn btn-primary mb-3">Upload New Music</a>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi-list-ul"></i> Your Music Files</h2>
+    <a href="{% url 'upload_music' %}" class="btn btn-primary">
+        <i class="bi-cloud-upload"></i> Upload New Music
+    </a>
+</div>
 
 <div class="row">
     {% for music in music_files %}
@@ -14,26 +18,83 @@
                 <h5 class="card-title">{{ music.title }}</h5>
                 <h6 class="card-subtitle mb-2 text-muted">{{ music.artist }}</h6>
                 <p class="card-text">
-                    Format: {{ music.extension|upper }}<br>
-                    Uploaded: {{ music.uploaded_at|date:"M d, Y" }}
+                    <span class="badge bg-secondary">Original: {{ music.original_extension|upper }}</span>
+                    {% if music.converted_file and music.conversion_status == 'success' %}
+                        <span class="badge bg-success status-badge">Converted: {{ music.target_extension|upper }}</span>
+                    {% elif music.conversion_status == 'failed' %}
+                        <span class="badge bg-danger status-badge">Failed: {{ music.target_extension|upper }}</span>
+                    {% else %}
+                        <span class="badge bg-warning status-badge">Target: {{ music.target_extension|upper }}</span>
+                    {% endif %}
                 </p>
-                <div class="mb-3">
+                
+                <div class="audio-player">
                     <audio controls class="w-100">
-                        <source src="{{ music.audio_file.url }}" type="audio/{{ music.extension }}">
+                        <source src="{{ music.original_file.url }}" type="audio/{{ music.original_extension }}">
                         Your browser does not support the audio element.
                     </audio>
                 </div>
-                <div class="d-flex gap-2">
-                    <a href="{{ music.audio_file.url }}" download class="btn btn-success btn-sm">Download</a>
-                    <a href="{% url 'edit_music' music.pk %}" class="btn btn-warning btn-sm">Edit</a>
-                    <a href="{% url 'delete_music' music.pk %}" class="btn btn-danger btn-sm">Delete</a>
+                
+                <div class="d-flex flex-wrap gap-2 mt-3">
+                    {% if music.converted_file and music.conversion_status == 'success' %}
+                        <a href="{% url 'download_music' music.pk %}" class="btn btn-success btn-sm">
+                            <i class="bi-download"></i> {{ music.target_extension|upper }}
+                        </a>
+                    {% else %}
+                        <a href="{% url 'convert_music' music.pk %}" class="btn btn-warning btn-sm">
+                            <i class="bi-gear"></i> Convert
+                        </a>
+                    {% endif %}
+                    
+                    <a href="{% url 'download_original' music.pk %}" class="btn btn-info btn-sm">
+                        <i class="bi-download"></i> Original
+                    </a>
+                    
+                    <a href="{% url 'convert_music' music.pk %}" class="btn btn-outline-primary btn-sm">
+                        <i class="bi-pencil"></i> Change Format
+                    </a>
+                    
+                    <button type="button" class="btn btn-outline-danger btn-sm" data-bs-toggle="modal" data-bs-target="#deleteModal{{ music.pk }}">
+                        <i class="bi-trash"></i> Delete
+                    </button>
+                </div>
+            </div>
+            <div class="card-footer text-muted">
+                Uploaded: {{ music.uploaded_at|timesince }} ago
+                {% if music.converted_at %}
+                    <br>Converted: {{ music.converted_at|timesince }} ago
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Modal -->
+    <div class="modal fade" id="deleteModal{{ music.pk }}" tabindex="-1" aria-labelledby="deleteModalLabel{{ music.pk }}" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="deleteModalLabel{{ music.pk }}">Confirm Delete</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    Are you sure you want to delete "{{ music.title }}"?
+                </div>
+                <div class="modal-footer">
+                    <form method="post" action="{% url 'delete_music' music.pk %}">
+                        {% csrf_token %}
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-danger">Delete</button>
+                    </form>
                 </div>
             </div>
         </div>
     </div>
     {% empty %}
     <div class="col-12">
-        <div class="alert alert-info">No music files uploaded yet.</div>
+        <div class="alert alert-info">
+            <i class="bi-info-circle"></i> No music files uploaded yet. 
+            <a href="{% url 'upload_music' %}" class="alert-link">Upload your first music file</a>.
+        </div>
     </div>
     {% endfor %}
 </div>

@@ -26,7 +26,7 @@ SECRET_KEY = 'django-insecure-^urj-o@gb23fph7uhx(tl6l92@^a2prwz*^yrn7xbwumt0*dt!
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["*"]
 
 
 # Application definition
@@ -132,6 +132,7 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Jazzmin Settings
+# Jazzmin Settings
 JAZZMIN_SETTINGS = {
     "site_title": "Music Converter",
     "site_header": "Music Converter",
@@ -139,12 +140,23 @@ JAZZMIN_SETTINGS = {
     "welcome_sign": "Welcome to the Music Converter Admin",
     "copyright": "Music Converter Ltd",
     "show_ui_builder": True,
+    "navigation_expanded": True,
+    "topmenu_links": [
+        {"name": "Home", "url": "admin:index", "permissions": ["auth.view_user"]},
+        {"name": "View Site", "url": "/", "new_window": False},
+        {"model": "auth.User"},
+        {"app": "music_app"},
+    ],
 }
 
 JAZZMIN_UI_TWEAKS = {
     "theme": "flatly",
     "dark_mode_theme": "darkly",
 }
+
+# File upload settings
+FILE_UPLOAD_MAX_MEMORY_SIZE = 10485760  # 10MB
+DATA_UPLOAD_MAX_MEMORY_SIZE = 10485760  # 10MB
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field

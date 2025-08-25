@@ -6,5 +6,6 @@ urlpatterns = [
     path('upload/', views.upload_music, name='upload_music'),
     path('convert/<int:pk>/', views.convert_music, name='convert_music'),
     path('download/<int:pk>/', views.download_music, name='download_music'),
+    path('download-original/<int:pk>/', views.download_original, name='download_original'),
     path('delete/<int:pk>/', views.delete_music, name='delete_music'),
 ]
