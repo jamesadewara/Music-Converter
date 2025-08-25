@@ -10,33 +10,46 @@
                 <h4 class="card-title mb-0"><i class="bi-cloud-upload"></i> Upload Music File</h4>
             </div>
             <div class="card-body">
-                <form method="post" enctype="multipart/form-data">
+                <form method="post" enctype="multipart/form-data" id="uploadForm">
                     {% csrf_token %}
                     
                     <div class="mb-3">
-                        <label for="id_title" class="form-label">Song Title</label>
+                        <label for="id_title" class="form-label">Song Title *</label>
                         {{ form.title }}
+                        {% if form.title.errors %}
+                            <div class="text-danger">{{ form.title.errors }}</div>
+                        {% endif %}
                     </div>
                     
                     <div class="mb-3">
                         <label for="id_artist" class="form-label">Artist</label>
                         {{ form.artist }}
+                        {% if form.artist.errors %}
+                            <div class="text-danger">{{ form.artist.errors }}</div>
+                        {% endif %}
                     </div>
                     
                     <div class="mb-3">
-                        <label for="id_original_file" class="form-label">Music File</label>
+                        <label for="id_original_file" class="form-label">Music File *</label>
                         {{ form.original_file }}
-                        <div class="form-text">Supported formats: MP3, WAV, OGG, FLAC, M4A</div>
+                        <div class="form-text">Supported formats: MP3, WAV, OGG, FLAC, M4A, AAC</div>
+                        {% if form.original_file.errors %}
+                            <div class="text-danger">{{ form.original_file.errors }}</div>
+                        {% endif %}
+                        <div id="fileError" class="text-danger d-none"></div>
                     </div>
                     
                     <div class="mb-3">
-                        <label for="id_target_extension" class="form-label">Convert To</label>
+                        <label for="id_target_extension" class="form-label">Convert To *</label>
                         {{ form.target_extension }}
                         <div class="form-text">Select the format you want to convert your music to</div>
+                        {% if form.target_extension.errors %}
+                            <div class="text-danger">{{ form.target_extension.errors }}</div>
+                        {% endif %}
                     </div>
                     
                     <div class="d-flex gap-2">
-                        <button type="submit" class="btn btn-primary">
+                        <button type="submit" class="btn btn-primary" id="submitBtn">
                             <i class="bi-cloud-upload"></i> Upload
                         </button>
                         <a href="{% url 'music_list' %}" class="btn btn-secondary">
@@ -48,4 +61,65 @@
         </div>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('uploadForm');
+    const fileInput = document.getElementById('id_original_file');
+    const fileError = document.getElementById('fileError');
+    const submitBtn = document.getElementById('submitBtn');
+    
+    // Check if iOS device
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    
+    if (isIOS) {
+        // Change accept attribute for iOS compatibility
+        fileInput.setAttribute('accept', 'audio/*');
+        
+        // Add helpful message for iOS users
+        const helpText = document.createElement('div');
+        helpText.className = 'alert alert-info mt-3';
+        helpText.innerHTML = '<strong>iOS Users:</strong> If you have trouble selecting files, try using the Files app to browse for your music.';
+        fileInput.parentNode.appendChild(helpText);
+    }
+    
+    // Validate file before submission
+    form.addEventListener('submit', function(e) {
+        const file = fileInput.files[0];
+        if (!file) {
+            e.preventDefault();
+            fileError.textContent = 'Please select a file to upload.';
+            fileError.classList.remove('d-none');
+            return;
+        }
+        
+        // Check file size (max 25MB)
+        const maxSize = 25 * 1024 * 1024; // 25MB in bytes
+        if (file.size > maxSize) {
+            e.preventDefault();
+            fileError.textContent = 'File size must be less than 25MB.';
+            fileError.classList.remove('d-none');
+            return;
+        }
+        
+        // Check file type
+        const allowedTypes = ['audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/flac', 'audio/x-m4a', 'audio/aac', 'audio/mp4'];
+        if (!allowedTypes.includes(file.type) && !file.name.match(/\.(mp3|wav|ogg|flac|m4a|aac)$/i)) {
+            e.preventDefault();
+            fileError.textContent = 'Please select a valid audio file (MP3, WAV, OGG, FLAC, M4A, AAC).';
+            fileError.classList.remove('d-none');
+            return;
+        }
+        
+        // Disable submit button to prevent double submission
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Uploading...';
+    });
+    
+    // Clear error when file changes
+    fileInput.addEventListener('change', function() {
+        fileError.classList.add('d-none');
+    });
+});
+</script>
 {% endblock %}

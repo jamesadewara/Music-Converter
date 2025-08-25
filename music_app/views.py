@@ -9,27 +9,41 @@ import os
 def music_list(request):
     music_files = Music.objects.all().order_by('-uploaded_at')
     return render(request, 'music_app/music_list.html', {'music_files': music_files})
-
 def upload_music(request):
     if request.method == 'POST':
         form = MusicUploadForm(request.POST, request.FILES)
         if form.is_valid():
-            music = form.save()
-            messages.success(request, 'Music file uploaded successfully!')
-            
-            # Try to convert immediately after upload
             try:
-                if music.convert_audio_file():
-                    messages.success(request, f'Music file converted to {music.target_extension.upper()} successfully!')
-                else:
-                    messages.warning(request, 'File uploaded but conversion failed. You can try converting it manually.')
-            except Exception as e:
-                messages.warning(request, f'File uploaded but conversion failed: {str(e)}')
+                music = form.save()
+                messages.success(request, 'Music file uploaded successfully!')
                 
-            return redirect('music_list')
+                # Try to convert immediately after upload
+                try:
+                    if music.convert_audio_file():
+                        messages.success(request, f'Music file converted to {music.target_extension.upper()} successfully!')
+                    else:
+                        messages.warning(request, 'File uploaded but conversion failed. You can try converting it manually.')
+                except Exception as e:
+                    messages.warning(request, f'File uploaded but conversion failed: {str(e)}')
+                    
+                return redirect('music_list')
+                
+            except Exception as e:
+                messages.error(request, f'Error saving file: {str(e)}')
+        else:
+            # Add form errors to messages
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f"{field}: {error}")
     else:
         form = MusicUploadForm()
-    return render(request, 'music_app/upload_music.html', {'form': form})
+    
+    # Add mobile context
+    context = {
+        'form': form,
+        'is_mobile': getattr(request, 'is_mobile_device', False)
+    }
+    return render(request, 'music_app/upload_music.html', context)
 
 def convert_music(request, pk):
     music = get_object_or_404(Music, pk=pk)
